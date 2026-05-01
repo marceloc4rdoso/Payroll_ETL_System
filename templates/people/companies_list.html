@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Empresas | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Empresas</h1>
+  <ul>
+    {% for c in companies %}
+      <li>{{ c.name }} ({{ c.get_layout_type_display }})</li>
+    {% empty %}
+      <li>Nenhuma empresa cadastrada.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}
+

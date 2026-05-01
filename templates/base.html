@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Payroll ETL{% endblock %}</title>
+  </head>
+  <body>
+    <nav>
+      <a href="{% url 'processor:upload' %}">Upload</a>
+      <a href="{% url 'processor:uploads' %}">Histórico</a>
+      <span style="margin-left: 12px;">
+        {% if user.is_authenticated %}
+          {{ user.get_username }} |
+          <a href="{% url 'logout' %}">Sair</a>
+        {% else %}
+          <a href="{% url 'login' %}">Entrar</a>
+        {% endif %}
+      </span>
+    </nav>
+
+    {% if messages %}
+      <ul>
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
+

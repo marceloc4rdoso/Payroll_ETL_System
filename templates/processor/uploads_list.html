@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Histórico de Uploads</h1>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Empresa</th>
+        <th>Usuário</th>
+        <th>Status</th>
+        <th>Registros</th>
+        <th>Criado em</th>
+        <th>CSV Web</th>
+        <th>CSV Impressão</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in uploads %}
+        <tr>
+          <td>{{ u.id }}</td>
+          <td>{{ u.empresa.name }}</td>
+          <td>{% if u.uploaded_by %}{{ u.uploaded_by.get_username }}{% endif %}</td>
+          <td>{{ u.get_status_display }}</td>
+          <td>{{ u.row_count }}</td>
+          <td>{{ u.created_at }}</td>
+          <td>
+            {% if u.web_csv %}
+              <a href="{{ u.web_csv.url }}">baixar</a>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.print_csv %}
+              <a href="{{ u.print_csv.url }}">baixar</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8">Nenhum upload ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
+
