@@ -167,6 +167,38 @@ project_root/
   - `90000000000002` (Cabucu)
 - Dry-run disponível: `python manage.py seed_empresas --dry-run`
 
+### 7.11 CRUD de cadastros e Dashboard pós-login
+- Dashboard central em `/` (requer login) com KPIs:
+  - Total de uploads
+  - Contagem por status (Pendente/Processando/Concluído/Falhou)
+  - Uploads por empresa
+  - Uploads por usuário
+  - Últimos uploads
+- CRUD de Empresas:
+  - Listar: `/people/empresas/`
+  - Criar: `/people/empresas/novo/`
+  - Editar: `/people/empresas/<id>/editar/`
+  - Excluir: `/people/empresas/<id>/excluir/`
+- CRUD de Contatos:
+  - Listar: `/people/contatos/` (com filtro por empresa via querystring)
+  - Criar: `/people/contatos/novo/`
+  - Editar: `/people/contatos/<id>/editar/`
+  - Excluir: `/people/contatos/<id>/excluir/`
+- Menu superior (maintop) atualizado para navegar entre Dashboard, Upload, Histórico, Empresas e Contatos.
+
+### 7.12 Sistemas de origem e geração de layouts (novo fluxo)
+- Entidade `Sistema` (SourceSystem) representa o “sistema de origem” dos arquivos (ex.: RM Labore, Folhamatic, Genesis).
+- Cadastro de sistemas em `/sistemas/` com CRUD completo.
+- Ao criar/editar um Sistema, é possível enviar um **arquivo modelo TXT**; ao salvar:
+  - o sistema calcula o SHA-256 do arquivo
+  - impede duplicidade (se o mesmo arquivo modelo já estiver associado a outro sistema com layout pronto)
+  - gera automaticamente um `layout_spec` (JSON) para parsing básico por “colunas” (fixed-width por blocos de texto).
+- No cadastro de Empresa, o usuário deve selecionar um **Sistema/Layout pronto** (somente sistemas com `layout_spec` gerado aparecem para seleção).
+- No processamento, o layout aplicado ao upload é definido por:
+  - `empresa.source_system.code` (preferencial)
+  - fallback para `empresa.layout_type` (compatibilidade com registros antigos)
+- Diretório de amostras locais (não versionado): `processor/.sample_txt/` (ignorado no Git).
+
 ## 8. Comandos de execução (ordem recomendada)
 
 ### 8.1 Windows (PowerShell)

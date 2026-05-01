@@ -7,6 +7,33 @@ from django.utils import timezone
 from people.models import Empresa
 
 
+def system_sample_path(instance: "SourceSystem", filename: str) -> str:
+    return f"layout_samples/{instance.code}/{filename}"
+
+
+class SourceSystem(models.Model):
+    code = models.CharField("Código", max_length=32, unique=True)
+    name = models.CharField("Nome", max_length=120)
+    is_active = models.BooleanField("Ativo", default=True)
+    sample_file = models.FileField("Arquivo modelo", upload_to=system_sample_path, null=True, blank=True)
+    sample_sha256 = models.CharField("SHA-256 do modelo", max_length=64, blank=True)
+    layout_spec = models.JSONField("Especificação do layout", null=True, blank=True)
+    generated_at = models.DateTimeField("Gerado em", null=True, blank=True)
+    created_at = models.DateTimeField("Criado em", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Sistema"
+        verbose_name_plural = "Sistemas"
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.code})"
+
+    @property
+    def is_layout_ready(self) -> bool:
+        return bool(self.layout_spec)
+
+
 def upload_original_path(instance: "Upload", filename: str) -> str:
     dt = timezone.localdate()
     return f"uploads/{dt:%Y/%m/%d}/empresa_{instance.empresa_id}/{filename}"

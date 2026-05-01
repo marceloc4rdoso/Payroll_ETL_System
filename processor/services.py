@@ -298,7 +298,7 @@ def parse_folhamatic(file_path: str | Path) -> pd.DataFrame:
     return pd.DataFrame(rows, dtype="string")
 
 
-def parse_file(file_path: str | Path, layout_type: LayoutName) -> pd.DataFrame:
+def parse_file(file_path: str | Path, layout_type: str) -> pd.DataFrame:
     if layout_type == "GENESIS":
         return parse_genesis(file_path)
     if layout_type == "RMLABORE_DEFAULT":
@@ -309,7 +309,19 @@ def parse_file(file_path: str | Path, layout_type: LayoutName) -> pd.DataFrame:
         return parse_contimatic(file_path)
     if layout_type == "FOLHAMATIC":
         return parse_folhamatic(file_path)
-    raise ValueError(f"Layout não suportado: {layout_type}")
+    from processor.layout_builder import parse_with_fixed_width_spec
+    from processor.models import SourceSystem
+
+    system = SourceSystem.objects.filter(code=layout_type).exclude(layout_spec=None).first()
+    if not system:
+        raise ValueError(f"Layout não suportado: {layout_type}")
+
+    text = Path(file_path).read_text(encoding=DEFAULT_TXT_ENCODING, errors="replace")
+    rows = parse_with_fixed_width_spec(text, system.layout_spec)
+    for r in rows:
+        r["layout_type"] = layout_type
+        r["system_name"] = system.name
+    return pd.DataFrame(rows, dtype="string")
 
 
 def fold_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -364,12 +376,13 @@ def process_upload(upload: Upload) -> None:
     - anexa os arquivos gerados nos FileFields do Upload.
     """
 
-    upload.detected_layout_type = upload.empresa.layout_type
+    layout_type = upload.empresa.source_system.code if upload.empresa.source_system else upload.empresa.layout_type
+    upload.detected_layout_type = layout_type
     upload.save(update_fields=["detected_layout_type"])
     upload.mark_processing()
 
     try:
-        df_web = parse_file(upload.original_file.path, upload.empresa.layout_type)
+        df_web = parse_file(upload.original_file.path, layout_type)  # type: ignore[arg-type]
         df_print = fold_dataframe(df_web)
 
         dt = timezone.localdate()

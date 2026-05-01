@@ -8,6 +8,8 @@ __pycache__/
 db.sqlite3
 media/
 sample_txt/
+processor/.sample_txt/
+.sample_txt/
 
 .env
 .env.*

@@ -4,10 +4,11 @@
 
 {% block content %}
   <h1>Upload de TXT</h1>
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Processar</button>
-  </form>
+  <div class="card">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Processar</button>
+    </form>
+  </div>
 {% endblock %}
-

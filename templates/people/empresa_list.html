@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Empresas | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Empresas</h1>
+  <p><a class="btn" href="{% url 'people:empresa_create' %}">Nova empresa</a></p>
+
+  <div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Logo</th>
+        <th>Nome</th>
+        <th>CNPJ</th>
+        <th>Layout</th>
+        <th>Ativo</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in empresas %}
+        <tr>
+          <td>
+            {% if e.logo %}
+              <img src="{{ e.logo.url }}" alt="Logo" style="height: 24px; width: auto; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);" />
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td>{{ e.name }}</td>
+          <td>{{ e.cnpj }}</td>
+          <td>{{ e.sistema_nome }}</td>
+          <td>{% if e.is_active %}Sim{% else %}Não{% endif %}</td>
+          <td>
+            <a href="{% url 'people:empresa_update' e.id %}">Editar</a>
+            <a href="{% url 'people:empresa_delete' e.id %}">Excluir</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">Nenhuma empresa cadastrada.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% endblock %}

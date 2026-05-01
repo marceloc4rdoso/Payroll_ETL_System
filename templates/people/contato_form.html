@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Contato | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Contato</h1>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Salvar</button>
+  </form>
+  <p><a href="{% url 'people:contato_list' %}">Voltar</a></p>
+{% endblock %}
+

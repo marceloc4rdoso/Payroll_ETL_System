@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Dashboard</h1>
+
+  <div class="grid">
+    <div class="card col-4">
+      <div class="kpi">
+        <div>
+          <div class="kpi-label">Total de uploads</div>
+          <div class="kpi-value">{{ total_uploads }}</div>
+        </div>
+        <span class="badge">Geral</span>
+      </div>
+    </div>
+    <div class="card col-4">
+      <div class="kpi">
+        <div>
+          <div class="kpi-label">Pendentes</div>
+          <div class="kpi-value">{{ status_counts.PENDING|default:0 }}</div>
+        </div>
+        <span class="badge">Fila</span>
+      </div>
+    </div>
+    <div class="card col-4">
+      <div class="kpi">
+        <div>
+          <div class="kpi-label">Processando</div>
+          <div class="kpi-value">{{ status_counts.PROCESSING|default:0 }}</div>
+        </div>
+        <span class="badge">Em andamento</span>
+      </div>
+    </div>
+    <div class="card col-4">
+      <div class="kpi">
+        <div>
+          <div class="kpi-label">Concluídos</div>
+          <div class="kpi-value">{{ status_counts.DONE|default:0 }}</div>
+        </div>
+        <span class="badge">OK</span>
+      </div>
+    </div>
+    <div class="card col-4">
+      <div class="kpi">
+        <div>
+          <div class="kpi-label">Falhas</div>
+          <div class="kpi-value">{{ status_counts.FAILED|default:0 }}</div>
+        </div>
+        <span class="badge">Atenção</span>
+      </div>
+    </div>
+
+    <div class="card col-5">
+      <h2>Status dos uploads</h2>
+      <div class="row" style="align-items: center;">
+        <div class="donut" style="background: {{ status_conic|safe }};"></div>
+        <div style="flex: 1; min-width: 220px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in status_segments %}
+                <tr>
+                  <td>
+                    <span class="badge" style="border-color: rgba(255,255,255,0.12);">
+                      <span style="width: 10px; height: 10px; border-radius: 999px; background: {{ s.color }}; display: inline-block;"></span>
+                      {{ s.label }}
+                    </span>
+                  </td>
+                  <td>{{ s.value }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card col-7">
+      <h2>Uploads por empresa</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th>Total</th>
+            <th style="width: 40%;">Distribuição</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in uploads_by_empresa %}
+            <tr>
+              <td>{{ row.empresa__name }}</td>
+              <td>{{ row.total }}</td>
+              <td>
+                <div class="bar"><span style="width: {{ row.pct }}%;"></span></div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3">Sem dados.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card col-6">
+      <h2>Uploads por usuário</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Usuário</th>
+            <th>Total</th>
+            <th style="width: 40%;">Distribuição</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in uploads_by_user %}
+            <tr>
+              <td>{% if row.uploaded_by__username %}{{ row.uploaded_by__username }}{% else %}(sem usuário){% endif %}</td>
+              <td>{{ row.total }}</td>
+              <td>
+                <div class="bar"><span style="width: {{ row.pct }}%;"></span></div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3">Sem dados.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card col-6">
+      <h2>Últimos uploads</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Empresa</th>
+            <th>Status</th>
+            <th>Usuário</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in last_uploads %}
+            <tr>
+              <td>{{ u.id }}</td>
+              <td>{{ u.empresa.name }}</td>
+              <td>{{ u.get_status_display }}</td>
+              <td>{% if u.uploaded_by %}{{ u.uploaded_by.get_username }}{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4">Nenhum upload ainda.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

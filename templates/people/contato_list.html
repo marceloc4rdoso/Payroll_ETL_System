@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Contatos | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Contatos</h1>
+
+  <form method="get" style="margin-bottom: 12px;">
+    <label>Empresa:</label>
+    <select name="empresa">
+      <option value="">(todas)</option>
+      {% for e in empresas %}
+        <option value="{{ e.id }}" {% if empresa_selected == e.id|stringformat:"s" %}selected{% endif %}>
+          {{ e.name }}
+        </option>
+      {% endfor %}
+    </select>
+    <button type="submit">Filtrar</button>
+  </form>
+
+  <p><a href="{% url 'people:contato_create' %}">Novo contato</a></p>
+
+  <table border="1" cellpadding="4" cellspacing="0">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Empresa</th>
+        <th>E-mail</th>
+        <th>Telefone</th>
+        <th>Ativo</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in contatos %}
+        <tr>
+          <td>{{ c.name }}</td>
+          <td>{{ c.empresa.name }}</td>
+          <td>{{ c.email }}</td>
+          <td>{{ c.phone }}</td>
+          <td>{% if c.is_active %}Sim{% else %}Não{% endif %}</td>
+          <td>
+            <a href="{% url 'people:contato_update' c.id %}">Editar</a>
+            <a href="{% url 'people:contato_delete' c.id %}">Excluir</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">Nenhum contato cadastrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

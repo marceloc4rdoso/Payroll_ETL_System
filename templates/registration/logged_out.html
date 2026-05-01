@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Login | Payroll ETL{% endblock %}
+{% block title %}Logout | Payroll ETL{% endblock %}
 
 {% block content %}
-  <div class="card" style="max-width: 560px;">
+  <div class="card" style="max-width: 620px;">
     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
       <img class="brand-logo" src="{% static 'brand/capybird-maker-labs.svg' %}" alt="Capybird Maker Labs" />
       <div>
@@ -12,11 +12,14 @@
         <div class="muted" style="font-size: 13px;">Mantenedora do Payroll ETL System</div>
       </div>
     </div>
-    <h1 style="margin-top: 0;">Login</h1>
-    <form method="post">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit">Entrar</button>
-    </form>
+    <h1 style="margin-top: 0;">Você saiu com segurança</h1>
+    <p class="muted" style="margin-top: 0;">
+      Sua sessão foi encerrada. Para continuar, faça login novamente.
+    </p>
+    <div class="row">
+      <a class="btn" href="{% url 'login' %}">Entrar novamente</a>
+      <a class="btn" href="{% url 'processor:dashboard' %}">Ir para o dashboard</a>
+    </div>
   </div>
 {% endblock %}
+

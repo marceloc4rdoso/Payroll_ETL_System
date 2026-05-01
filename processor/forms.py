@@ -3,6 +3,7 @@ from __future__ import annotations
 from django import forms
 
 from people.models import Empresa
+from processor.models import SourceSystem
 
 
 class UploadForm(forms.Form):
@@ -21,3 +22,20 @@ class UploadForm(forms.Form):
             raise forms.ValidationError("Envie um arquivo .txt.")
         return f
 
+
+class SourceSystemForm(forms.ModelForm):
+    class Meta:
+        model = SourceSystem
+        fields = ["code", "name", "is_active", "sample_file"]
+
+    def clean_code(self):
+        code = (self.cleaned_data["code"] or "").strip().upper()
+        return code
+
+    def clean_sample_file(self):
+        f = self.cleaned_data.get("sample_file")
+        if not f:
+            return f
+        if not f.name.lower().endswith(".txt"):
+            raise forms.ValidationError("Envie um arquivo .txt como modelo.")
+        return f

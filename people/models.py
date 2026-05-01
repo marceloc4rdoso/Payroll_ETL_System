@@ -5,6 +5,11 @@ from django.core.validators import RegexValidator
 from django.db import models
 
 
+def empresa_logo_path(instance: "Empresa", filename: str) -> str:
+    cnpj = (instance.cnpj or "sem_cnpj").strip() or "sem_cnpj"
+    return f"company_logos/{cnpj}/{filename}"
+
+
 class Empresa(models.Model):
     """
     Cadastro de empresas/clientes do sistema (multi-empresa).
@@ -30,12 +35,16 @@ class Empresa(models.Model):
         validators=[RegexValidator(r"^\d{14}$", message="Informe 14 dígitos para o CNPJ.")],
         help_text="Armazenado somente com dígitos (ex.: 11437239000140).",
     )
-    layout_type = models.CharField(
-        "Layout do TXT",
-        max_length=32,
-        choices=LayoutType.choices,
-        default=LayoutType.RMLABORE_DEFAULT,
+    layout_type = models.CharField("Layout do TXT", max_length=32, default=LayoutType.RMLABORE_DEFAULT)
+    source_system = models.ForeignKey(
+        "processor.SourceSystem",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="empresas",
+        verbose_name="Sistema de origem",
     )
+    logo = models.FileField("Logo", upload_to=empresa_logo_path, null=True, blank=True)
     is_active = models.BooleanField("Ativo", default=True)
     created_at = models.DateTimeField("Criado em", auto_now_add=True)
     updated_at = models.DateTimeField("Atualizado em", auto_now=True)
@@ -53,6 +62,13 @@ class Empresa(models.Model):
     def __str__(self) -> str:
         return self.name
 
+    @property
+    def sistema_nome(self) -> str:
+        if self.source_system:
+            return self.source_system.name
+        known = dict(self.LayoutType.choices)
+        return known.get(self.layout_type, self.layout_type)
+
     @staticmethod
     def normalize_cnpj(value: str) -> str:
         return re.sub(r"\D", "", value or "")
@@ -62,6 +78,8 @@ class Empresa(models.Model):
         self.cnpj = self.normalize_cnpj(self.cnpj)
         if self.cnpj and len(self.cnpj) != 14:
             raise ValidationError({"cnpj": "CNPJ deve ter 14 dígitos."})
+        if self.source_system:
+            self.layout_type = self.source_system.code
 
 
 class Contato(models.Model):

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Sistemas | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Sistemas</h1>
+  <p class="muted">Cadastre os sistemas de origem (ex.: Folhamatic, RM Labore, Genesis). Cada empresa pode apontar para um sistema.</p>
+
+  <p><a class="btn" href="{% url 'processor:system_create' %}">Novo sistema</a></p>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Código</th>
+          <th>Layout</th>
+          <th>Ativo</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in systems %}
+          <tr>
+            <td>{{ s.name }}</td>
+            <td>{{ s.code }}</td>
+            <td>{% if s.is_layout_ready %}Pronto{% else %}Pendente{% endif %}</td>
+            <td>{% if s.is_active %}Sim{% else %}Não{% endif %}</td>
+            <td>
+              <a href="{% url 'processor:system_update' s.id %}">Editar</a>
+              <a href="{% url 'processor:system_delete' s.id %}">Excluir</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">Nenhum sistema cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
