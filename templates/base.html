@@ -270,9 +270,11 @@
           <a class="nav-link" href="{% url 'processor:dashboard' %}">Dashboard</a>
           <a class="nav-link" href="{% url 'processor:upload' %}">Upload</a>
           <a class="nav-link" href="{% url 'processor:uploads' %}">Histórico</a>
-          <a class="nav-link" href="{% url 'processor:system_list' %}">Sistemas</a>
-          <a class="nav-link" href="{% url 'people:empresa_list' %}">Empresas</a>
-          <a class="nav-link" href="{% url 'people:contato_list' %}">Contatos</a>
+          {% if user.is_staff or user.is_superuser %}
+            <a class="nav-link" href="{% url 'processor:system_list' %}">Sistemas</a>
+            <a class="nav-link" href="{% url 'people:empresa_list' %}">Empresas</a>
+            <a class="nav-link" href="{% url 'people:contato_list' %}">Contatos</a>
+          {% endif %}
         </div>
         <div class="spacer"></div>
         <div class="user-pill">

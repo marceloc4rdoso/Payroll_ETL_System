@@ -309,7 +309,7 @@ def parse_file(file_path: str | Path, layout_type: str) -> pd.DataFrame:
         return parse_contimatic(file_path)
     if layout_type == "FOLHAMATIC":
         return parse_folhamatic(file_path)
-    from processor.layout_builder import parse_with_fixed_width_spec
+    from processor.layout_builder import parse_with_fixed_width_spec, parse_with_payroll_layout_spec_v2
     from processor.models import SourceSystem
 
     system = SourceSystem.objects.filter(code=layout_type).exclude(layout_spec=None).first()
@@ -317,7 +317,11 @@ def parse_file(file_path: str | Path, layout_type: str) -> pd.DataFrame:
         raise ValueError(f"Layout não suportado: {layout_type}")
 
     text = Path(file_path).read_text(encoding=DEFAULT_TXT_ENCODING, errors="replace")
-    rows = parse_with_fixed_width_spec(text, system.layout_spec)
+    spec = system.layout_spec or {}
+    if spec.get("version") == 2 and spec.get("mode") == "payroll_record":
+        rows = parse_with_payroll_layout_spec_v2(text, spec)
+    else:
+        rows = parse_with_fixed_width_spec(text, spec)
     for r in rows:
         r["layout_type"] = layout_type
         r["system_name"] = system.name

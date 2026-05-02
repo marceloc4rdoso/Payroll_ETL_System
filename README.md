@@ -4,7 +4,7 @@ Sistema web em Django para processamento de arquivos TXT com layout de “posiç
 - CSV Web (1:1) com separador `;`
 - CSV de Impressão com lógica de “dobra” A/B (concatenação horizontal)
 
-O projeto é multi-empresa: cada Empresa possui um `layout_type` que define como o TXT será interpretado.
+O projeto é multi-empresa: cada Empresa aponta para um Sistema de origem (`SourceSystem`) e o parsing usa o `layout_spec` configurado para esse Sistema.
 
 ## Requisitos
 - Python 3.x
@@ -18,7 +18,7 @@ Dependências Python:
 - `core/`: configurações do Django
 - `people/`: cadastro de `Empresa` e `Contato`
 - `processor/`: upload/processamento (`Upload`) + layouts + services
-- `sample_txt/`: arquivos de exemplo
+- `processor/.sample_txt/`: amostras locais para validação do designer de layout (ignorado no git)
 - `templates/`: templates HTML (login, upload, histórico)
 - `media/`: uploads e CSVs gerados (não versionar)
 
@@ -39,6 +39,12 @@ Abra:
 - App: http://127.0.0.1:8000/
 - Admin: http://127.0.0.1:8000/admin/
 - Login: http://127.0.0.1:8000/accounts/login/
+
+## Perfis de acesso (admin x cliente)
+- Admin (staff/superuser): acesso total (Sistemas, Empresas, Contatos, Upload para qualquer empresa).
+- Cliente (não-admin): acesso restrito à sua empresa (Dashboard/Upload/Histórico).
+
+Todo usuário cliente é um `Contato` vinculado a uma `Empresa`. Ao criar/editar um Contato ativo, o sistema cria automaticamente um usuário e o vínculo Usuário → Empresa.
 
 ## Instalação e execução (Ubuntu / WSL)
 Observação: o `.venv` criado no Windows normalmente não funciona no WSL. Crie a venv no próprio Ubuntu.
@@ -65,10 +71,11 @@ Crie um superusuário:
 python manage.py createsuperuser
 ```
 
-Se precisar redefinir senha:
-```bash
-python manage.py changepassword SEU_USUARIO
-```
+### Primeiro acesso / Definir senha (clientes)
+Usuários criados automaticamente para Contatos são criados sem senha (senha inválida). O primeiro acesso é via:
+- http://127.0.0.1:8000/accounts/password_reset/
+
+Em desenvolvimento, o link de redefinição é impresso no console (EMAIL_BACKEND console).
 
 ## Carga automática de empresas/layouts
 O comando abaixo cria/atualiza empresas padrão (idempotente):
@@ -88,7 +95,9 @@ Nota: para os 2 arquivos RM Labore Default (Consórcios) que não trazem CNPJ na
 
 ## Como usar
 1. Faça login.
-2. Acesse `/` e envie um arquivo `.txt`, selecionando a Empresa correta.
+2. Acesse `/upload/` e envie um arquivo `.txt`.
+   - Admin escolhe a Empresa no formulário.
+   - Cliente usa a Empresa vinculada automaticamente.
 3. Após processar, acesse `/uploads/` para ver o histórico e baixar:
    - CSV Web (1:1)
    - CSV Impressão (dobra A/B)
@@ -98,8 +107,35 @@ Arquivos gerados:
 - `media/base_impressao.csv` (sobrescrito a cada processamento)
 - `media/generated/<data>/empresa_<id>/...` (saídas por upload)
 
+## Layouts dinâmicos (Designer)
+1. Cadastre um Sistema em `/sistemas/` e envie um arquivo modelo `.txt`.
+2. Abra o Designer em `/sistemas/<id>/layout/`.
+3. Ajuste:
+   - Marcador de início do holerite (Regex)
+   - Detail: linha inicial
+   - Campos Head/Detail/Bottom com Start/End e Linha (quando aplicável)
+4. Use Preview para validar extração.
+
+Convenção do Designer:
+- Linha e colunas são preenchidas em 1-based (linha 1, coluna 1..N).
+
+### Samples locais (.sample_txt)
+O Designer suporta comparar o Preview com um CSV esperado usando arquivos em `processor/.sample_txt/`:
+- Raw: `N_raw_<Sistema>.txt`
+- Raw intermediário: `N_raw_after_insertline_<Sistema>.txt`
+- Esperado: `N_csv_<Sistema>.csv`
+
+## Comandos úteis
+Criar/vincular usuários para contatos já existentes:
+```bash
+python manage.py sync_contato_users
+python manage.py sync_contato_users --names Ana Edilson
+```
+
 ## Variáveis de ambiente (opcional)
 - `DJANGO_SECRET_KEY`: sobrescreve o `SECRET_KEY` de desenvolvimento.
+- `DJANGO_EMAIL_BACKEND`: sobrescreve o backend de e-mail (default: console).
+- `DJANGO_DEFAULT_FROM_EMAIL`: remetente padrão de e-mail.
 
 Exemplo (bash):
 ```bash

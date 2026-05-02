@@ -1,5 +1,6 @@
 import re
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
@@ -45,6 +46,7 @@ class Empresa(models.Model):
         verbose_name="Sistema de origem",
     )
     logo = models.FileField("Logo", upload_to=empresa_logo_path, null=True, blank=True)
+    is_maintainer = models.BooleanField("Mantenedora (Capybird)", default=False)
     is_active = models.BooleanField("Ativo", default=True)
     created_at = models.DateTimeField("Criado em", auto_now_add=True)
     updated_at = models.DateTimeField("Atualizado em", auto_now=True)
@@ -92,6 +94,14 @@ class Contato(models.Model):
         on_delete=models.CASCADE,
         related_name="contatos",
     )
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="contato",
+        verbose_name="Usuário",
+    )
     name = models.CharField("Nome", max_length=120)
     email = models.EmailField("E-mail", blank=True)
     phone = models.CharField("Telefone", max_length=30, blank=True)
@@ -108,3 +118,30 @@ class Contato(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.empresa.name})"
+
+
+class UserEmpresaVinculo(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="empresa_vinculo",
+        verbose_name="Usuário",
+    )
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.PROTECT,
+        related_name="usuarios_vinculados",
+        verbose_name="Empresa vinculada",
+    )
+    is_active = models.BooleanField("Ativo", default=True)
+    created_at = models.DateTimeField("Criado em", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Vínculo Usuário → Empresa"
+        verbose_name_plural = "Vínculos Usuário → Empresa"
+        indexes = [
+            models.Index(fields=["empresa", "is_active"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} → {self.empresa}"

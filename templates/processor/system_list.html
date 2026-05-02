@@ -28,6 +28,7 @@
             <td>{% if s.is_active %}Sim{% else %}Não{% endif %}</td>
             <td>
               <a href="{% url 'processor:system_update' s.id %}">Editar</a>
+              <a href="{% url 'processor:system_layout' s.id %}">Layout</a>
               <a href="{% url 'processor:system_delete' s.id %}">Excluir</a>
             </td>
           </tr>

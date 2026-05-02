@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 from django.test import SimpleTestCase
 
+from processor.layout_builder import parse_with_payroll_layout_spec_v2
 from processor.services import fold_dataframe, parse_file
 
 
@@ -65,3 +66,58 @@ class FixedWidthParsingTests(SimpleTestCase):
         self.assertEqual(len(folded), 2)
         self.assertIn("a_A", folded.columns)
         self.assertIn("a_B", folded.columns)
+
+
+class PayrollLayoutV2ParsingTests(SimpleTestCase):
+    def test_parse_payroll_layout_v2_records_and_padding(self):
+        header_1 = "1" + "EMPRESA X".ljust(20) + "12345678000199" + "00001" + "JOAO DA SILVA".ljust(20)
+        header_2 = "1" + "EMPRESA Y".ljust(20) + "98765432000100" + "00002" + "MARIA OLIVEIRA".ljust(20)
+        text = "\n".join(
+            [
+                header_1,
+                " 001SALARIO                 30  1000,00     ",
+                " 002INSS                    00            100,00",
+                "9BASES                    1000,00 900,00 900,00  90,00 1000,00 100,00 900,00",
+                header_2,
+                " 010SALARIO                 30  2000,00     ",
+                "9BASES                    2000,00 1800,00 1800,00 180,00 2000,00 200,00 1800,00",
+            ]
+        )
+
+        spec = {
+            "version": 2,
+            "mode": "payroll_record",
+            "record_marker": {"type": "regex", "pattern": r"^1"},
+            "detail": {
+                "start_line_offset": 1,
+                "max_lines": 3,
+                "pad_to_max": True,
+                "index_format": "{base}{i}",
+                "fields": [
+                    {"name": "detail_cod", "start": 1, "end": 4, "enabled": True},
+                    {"name": "detail_description", "start": 4, "end": 30, "enabled": True},
+                ],
+            },
+            "head": {
+                "fields": [
+                    {"name": "head_company", "start": 1, "end": 21, "enabled": True, "line_offset": 0},
+                    {"name": "head_cnpj", "start": 21, "end": 35, "enabled": True, "line_offset": 0},
+                ]
+            },
+            "bottom": {
+                "fields": [
+                    {"name": "bottom_salarybase", "start": 10, "end": 17, "enabled": True, "line_offset": 3},
+                ]
+                ,
+                "marker": {"type": "regex", "pattern": r"^9"}
+            },
+        }
+
+        rows = parse_with_payroll_layout_spec_v2(text, spec)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["head_company"].strip(), "EMPRESA X")
+        self.assertEqual(rows[0]["head_cnpj"], "12345678000199")
+        self.assertEqual(rows[0]["detail_cod1"], "001")
+        self.assertEqual(rows[0]["detail_cod2"], "002")
+        self.assertIn("detail_cod3", rows[0])
+        self.assertEqual(rows[0]["detail_cod3"], "")

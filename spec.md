@@ -5,45 +5,49 @@
 ## 1. Objetivo do Projeto
 Desenvolver um sistema web MVP em Django para automação de ETL de folha de pagamento. O sistema deve processar arquivos TXT de posição fixa, converter para uma base estruturada (Web) e gerar um layout de impressão otimizado (Lado A/B) em CSV.
 ### 1.2. Requisitos de Negócio
-- Multi-Empresa: O sistema deve suportar 5 layouts de arquivos TXT distintos.
+- Multi-Empresa: O sistema deve suportar múltiplos layouts de arquivos TXT distintos (built-in e/ou dinâmicos via cadastro de Sistemas).
 - Conversão Web: Gerar um CSV 1:1 com os dados extraídos.
 - Conversão para Impressão: Gerar um CSV com "dobra" de colunas (Lado A e Lado B) para otimizar o espaço de impressão.
-- Portal de Usuário: Interface web para upload de arquivos e seleção da empresa correspondente.
-
+- Portal de Usuário: Interface web para upload de arquivos e seleção automática da empresa correspondente (para usuários clientes).
+- Os usuários da Capybird Maker Labs serão os usuários admin que podem fazer upload de arquivos e gerar layouts de qualquer empresa.
+- Os usuários não admin podem fazer upload de arquivos e gerar layouts apenas para a empresa vinculada.
+- Todo usuário do portal de cliente é um Contato, e todo Contato está vinculado a uma Empresa.
+- Ao cadastrar um Contato (ativo), o sistema cria automaticamente um Usuário e faz o vínculo Usuário → Empresa.
+ - O usuário é criado sem senha (password inválido) e deve definir a senha no fluxo "Primeiro acesso / Esqueci minha senha" da tela de login.
+  
 ## 2. Escopo Técnico - Especificações Técnicas (Stack)
 - Backend: Python 3.10+ / Django 4.2+
 - Processamento: Pandas (Engine de transformação)
-- Frontend: Django Templates + Bootstrap 5 (Interface para upload e gestão)
+- Frontend: Django Templates + CSS leve (sem dependências)
 - Arquivos: Suporte a 5 ou mais layouts distintos de TXT (um para cada empresa).
 - Banco de Dados: SQLite (padrão MVP)
 
 ## 3. Fluxo de Trabalho (Pipeline)
 ### 🔼 Etapa 1: Upload e Identificação
 - O usuário acessa o portal web.
- - Se usuário não estiver logado, redireciona para página de login.
- - Após login, redireciona para a página principal.
- - Se usuario Admin:
-  - Faz o upload do arquivo .txt.
-  - Seleciona em um Dropdown a qual das 5 empresas o arquivo pertence.
-- Se usuario Normal:
-  - Redireciona para página de upload.
-  - A empresa correspondente ja é pré selecionada.
-  - Faz o upload do arquivo .txt.
-Obs.: O sistema deve validar a empresa selecionada e o arquivo enviado.
-O sistema aceita até 10 arquivos .TXT por vez.
+ - Se o usuário não estiver logado, redireciona para a página de login.
+ - Após login, redireciona para a página principal (dashboard).
+- O usuário acessa `/upload/` e faz upload de um arquivo `.txt` por vez.
+ - Usuário admin (staff/superuser): seleciona a Empresa (ativa) no formulário.
+ - Usuário não-admin: a Empresa é definida automaticamente conforme o vínculo Usuário → Empresa.
+- O sistema valida a extensão do arquivo (`.txt`) e a Empresa selecionada.
 ### 3.1 Mapeamento e Extração (ETL) 
 - Extração (Extract)Leitura de arquivos .txt plaintext.
 - Uso de mapeamento manual de posições fixas (Fixed Width) para identificar campos.
 - Tratamento de todos os campos como string para preservar zeros à esquerda.
 
-Obs.:  No diretório sample_txt/ estão exemplos de arquivos TXT para cada empresa.
+Obs.: os arquivos modelo de referência não são versionados no GitHub. Use o diretório local `processor/.sample_txt/` (ignorado no Git) para armazenar amostras/modelos.
+Obs.: há também um diretório local `processor/.sample_txt/` usado para validação (raw + CSV esperado) do designer de layouts, seguindo o padrão:
+- Raw: `N_raw_<Sistema>.txt`
+- Raw intermediário (após inserção de linhas em branco): `N_raw_after_insertline_<Sistema>.txt`
+- Esperado: `N_csv_<Sistema>.csv`
 
 ### ⚙️ Etapa 3.2: Extração (Parsing)
 - O sistema utiliza um mapeamento de Posições Fixas específico para a empresa selecionada.
 - O Pandas lê o arquivo garantindo que todos os campos sejam tratados como string (para preservar zeros à esquerda em CPFs e Contas).
 ### 🔄 Etapa 3.3: Transformação (The "Fold" Logic)
 O sistema deve gerar dois DataFrames distintos:
-1. DataFrame Web (1:1): Representação fiel do arquivo original com 40 colunas.
+1. DataFrame Web (1:1): Representação fiel do arquivo original (quantidade de colunas varia por layout).
 2. DataFrame Impressão (Dobra A/B):
  1. Calcula o ponto médio: \(M = ceil(TotalLinhas / 2)\).
  2. Divide os dados em Bloco A (linhas 1 a \(M\)) e Bloco B (linhas \(M+1\) até o fim).
@@ -56,15 +60,25 @@ O sistema deve gerar dois DataFrames distintos:
 - Disponibilização de links de download para o CSV Web e o CSV de Impressão.
 Obs.: Os arquivos csv devem ter campos separados por ";" (semicolon). Em uma continuação do desenvolvimento esses arquivos base_printer.csv serão usados para alimentar um arquivo jxml (Jaspersoft)que posteriormente será processado para geração de PDFs para posterior impressao.
 ## 5. Estrutura de Especialistas (Prompts para Agentes Trae)
-🐍 Agente Python/PandasResponsável pela lógica contida em services.py. Deve focar na função de leitura pd.read_fwf e na manipulação de DataFrames para a lógica de dobra A/B. Pandas Specialist: Criar o arquivo services.py com a lógica de read_fwf (fixed width file) e a concatenação horizontal (axis=1).
+🐍 Agente Python/Pandas
+- Responsável pela lógica do ETL em `processor/services.py` (parsing, geração de CSV, dobra A/B).
+- Deve garantir leitura como string, preservando zeros à esquerda, e separador `;` nos CSVs.
+
 🎸 Agente Django
-Responsável pela arquitetura do projeto, configuração de settings.py, models.py (para gerenciar os uploads) e views.py.
-Django Architect: Estruturar models para salvar metadados dos arquivos e views para o fluxo de upload.
-🎨 Agente Bootstrap
-Responsável pela criação de formulários de upload limpos, tabelas de histórico de arquivos e botões de download. 
-Frontend Dev: Criar uma dashboard simples com histórico de uploads e status de processamento.
-Agente de Testes unitários
-Resposável pelos testes unitários para a lógica de dobra A/B e a manipulação de DataFrames. Também pelas demais partes do sistema, como views, templates e forms.
+- Responsável pela arquitetura do projeto, configuração de `settings.py`, `urls.py`, models, views e rotas.
+- Deve manter boas práticas de auth (login/logout), uploads em `media/` e migrações consistentes.
+
+🧩 Agente Layout/Parser (Layouts Dinâmicos)
+- Responsável pelo cadastro de Sistemas (`SourceSystem`), geração de `layout_spec` a partir de arquivos modelo e ajuste manual no Designer de Layout.
+- Deve garantir deduplicação por hash (SHA-256) e fallback para layouts “built-in” quando aplicável.
+- Deve manter compatibilidade com `layout_spec` v2 (modo holerite: head/detail/bottom, marcador de registro e padding de detail).
+
+🎨 Agente UI/UX (CSS leve)
+- Responsável por melhorar a UX sem aumentar complexidade: cards, navegação, tabelas, formulários.
+- Deve manter o tema consistente e reutilizar `templates/base.html`.
+
+🧪 Agente de Testes Unitários
+- Responsável por testes de parsing (built-in e dinâmico), dobra A/B, e smoke tests de rotas principais.
 
 ## 6. Estrutura de Arquivos Sugerida
 project_root/
@@ -75,15 +89,17 @@ project_root/
 │   ├── views.py            # CRUD de clientes e listagem
 │   └── urls.py             # Rotas do módulo de pessoas
 ├── processor/              # App do Motor ETL (O "Coração" do sistema)
-│   ├── layouts.py          # Dicionários com posições fixas de cada empresa
-│   ├── services.py         # Motor de processamento (Pandas: TXT -> CSV e Dobra A/B)
+│   ├── layouts.py          # Layouts built-in (quando existirem)
+│   ├── layout_builder.py   # Geração de layout_spec + parsing genérico (layouts dinâmicos)
+│   ├── services.py         # Motor de processamento (TXT -> CSV e Dobra A/B)
 │   ├── models.py           # Registro de Uploads (FK para Empresa, Data, Arquivos Gerados)
 │   ├── views.py            # Lógica de Upload, Processamento e Download
 │   └── urls.py             # Rotas do módulo de processamento
-├── templates/              # Interface HTML (Bootstrap 5)
+├── templates/              # Interface HTML (Django Templates + CSS leve)
 │   ├── base.html           # Layout principal (Navbar/Footer)
 │   ├── people/             # Telas de cadastro de clientes
 │   └── processor/          # Telas de upload e histórico de holerites
+├── static/                 # Assets do sistema (logo da Capybird, etc.)
 └── media/                  # Repositório de arquivos (TXTs originais e CSVs gerados)
 
 ## 7. Implementação Atual (o que já foi feito)
@@ -91,8 +107,9 @@ project_root/
 ### 7.1 Setup e Convenções do Repositório
 - Ambiente virtual criado em `.venv/`.
 - Dependências instaladas: `django` e `pandas`.
-- Diretório de amostras padronizado como `sample_txt/` (onde ficam os arquivos TXT de exemplo).
+- Diretório de amostras/modelos local (não versionado): `processor/.sample_txt/` (ignorado no Git).
 - Banco de dados padrão: SQLite (`db.sqlite3`).
+ - Assets do sistema: `static/` (servindo em `/static/`).
 
 ### 7.2 Estrutura Django criada
 - Projeto Django: `core` (na raiz do repositório).
@@ -105,20 +122,41 @@ project_root/
 ### 7.3 Rotas e autenticação
 - Autenticação padrão do Django habilitada em `accounts/` via `django.contrib.auth.urls`.
 - Rotas principais:
-  - `/` -> upload de TXT (app `processor`)
-  - `/uploads/` -> histórico de uploads e links de download (app `processor`)
-  - `/people/` -> listagem simples de empresas (app `people`)
+  - `/` -> dashboard (requer login)
+  - `/upload/` -> upload de TXT (app `processor`)
+  - `/uploads/` -> histórico de uploads e links de download
+  - `/sistemas/` -> CRUD de Sistemas (cadastro do sistema de origem + arquivo modelo)
+  - `/sistemas/<id>/layout/` -> Designer de Layout (admin/staff) para ajustar `layout_spec`
+  - `/people/empresas/` -> CRUD de Empresas
+  - `/people/contatos/` -> CRUD de Contatos
   - `/admin/` -> Django Admin
 - Tela de login implementada em `templates/registration/login.html`.
+- Tela de logout elegante implementada em `templates/registration/logged_out.html`.
+- Logout é efetuado via POST (por segurança) e não por GET.
 - Não existe usuário/senha padrão: o primeiro acesso deve ser feito criando um superusuário.
+- Permissões:
+ - Usuários admin (staff/superuser): acesso total (CRUDs + upload para qualquer empresa).
+ - Usuários não-admin: acesso a Dashboard/Upload/Histórico restritos à empresa vinculada.
+- Primeiro acesso / senha:
+ - O fluxo de definição de senha utiliza as rotas padrão do Django em `/accounts/password_reset/` (link disponível na tela de login).
 
 ### 7.4 Modelagem de dados implementada
 #### App `people`
 - `Empresa`
-  - Campos principais: `name`, `cnpj` (somente dígitos, 14, único), `layout_type`, `is_active`, timestamps.
-  - `layout_type` (choices): `FOLHAMATIC`, `RMLABORE_DEFAULT`, `RMLABORE_CUSTOM`, `GENESIS`, `CONTIMATIC`.
+  - Campos principais: `name`, `cnpj` (somente dígitos, 14, único), `is_maintainer`, `source_system`, `layout_type` (sincronizado), `logo`, `is_active`, timestamps.
+  - `logo` é armazenado em `media/company_logos/<cnpj>/...`.
+  - `is_maintainer=True` indica empresa mantenedora (Capybird): usuários vinculados a Contatos dessa empresa são admin.
 - `Contato`
   - FK para `Empresa` e campos básicos: `name`, `email`, `phone`, `role`, `is_active`, `created_at`.
+  - `user` (1:1): Usuário do portal (quando aplicável).
+- `Vínculo Usuário → Empresa` (`UserEmpresaVinculo`)
+  - Define a Empresa padrão/restrita para usuários não-admin (portal do cliente).
+
+#### App `processor`
+- `Sistema` (`SourceSystem`)
+  - Campos principais: `code`, `name`, `is_active`, `sample_file`, `sample_sha256`, `layout_spec`, `generated_at`.
+  - `sample_file` é armazenado em `media/layout_samples/<code>/...`.
+  - `layout_spec` é gerado automaticamente a partir do arquivo modelo e pode ser ajustado no Designer.
 
 #### App `processor`
 - `Upload`
@@ -128,7 +166,9 @@ project_root/
 
 ### 7.5 Parsing e processamento de TXT (ETL)
 - Implementado em `processor/services.py`.
-- Os arquivos de exemplo em `sample_txt/` têm formato de relatório e variações por fornecedor; por isso o parsing foi implementado por layout com regras e posições baseadas nas amostras.
+- O sistema suporta:
+  - layouts built-in (por `code` conhecido)
+  - layouts dinâmicos (via `layout_spec` armazenado no banco, criado a partir do arquivo modelo e/ou ajustado no Designer)
 - Saídas geradas:
   - CSV Web (1:1) com `;` como separador.
   - CSV Impressão (dobra A/B) aplicando o split no meio (ceil) e concatenação horizontal.
@@ -146,17 +186,17 @@ project_root/
 - `templates/base.html`: layout básico e navegação.
 - `templates/processor/upload.html`: formulário de upload + empresa.
 - `templates/processor/uploads_list.html`: histórico e links de download.
-- `templates/people/companies_list.html`: listagem simples de empresas.
+- `templates/people/empresa_list.html`: listagem simples de empresas.
 
 ### 7.8 Admin
 - Registro de modelos no Django Admin:
   - `people/admin.py`: `Empresa`, `Contato`
-  - `processor/admin.py`: `Upload`
+  - `processor/admin.py`: `Upload`, `SourceSystem`
 
 ### 7.9 Testes unitários
 - Testes básicos em `processor/tests.py`:
-  - Parsing do layout GENESIS (amostra Orion)
-  - Parsing do layout RM Labore Custom (amostra Vila Boa)
+  - Parsing do layout GENESIS (amostra inline)
+  - Parsing do layout RM Labore Custom (amostra inline)
   - Validação do algoritmo de dobra A/B (`fold_dataframe`)
 
 ### 7.10 Seed automático de Empresas (carga inicial)
@@ -192,12 +232,26 @@ project_root/
 - Ao criar/editar um Sistema, é possível enviar um **arquivo modelo TXT**; ao salvar:
   - o sistema calcula o SHA-256 do arquivo
   - impede duplicidade (se o mesmo arquivo modelo já estiver associado a outro sistema com layout pronto)
-  - gera automaticamente um `layout_spec` (JSON) para parsing básico por “colunas” (fixed-width por blocos de texto).
+-  gera automaticamente um `layout_spec` (JSON) no formato v2 (modo holerite: head/detail/bottom), que deve ser ajustado no Designer quando necessário.
+- Designer de Layout (`/sistemas/<id>/layout/`):
+  - Permite configurar `record_marker` (regex do início do holerite) e a separação de seções (detail x bottom).
+  - Permite cadastrar/ajustar campos com posições (Start/End) e linha (Head/Bottom).
+  - UI usa valores 1-based (linha 1 / coluna 1), e o sistema converte internamente para índices do parser.
+  - Possui Preview com sample local de `processor/.sample_txt/`.
+  - Possui Auto preencher (raw + CSV esperado) para sugerir um layout inicial sem ativar campos novos automaticamente.
 - No cadastro de Empresa, o usuário deve selecionar um **Sistema/Layout pronto** (somente sistemas com `layout_spec` gerado aparecem para seleção).
 - No processamento, o layout aplicado ao upload é definido por:
   - `empresa.source_system.code` (preferencial)
   - fallback para `empresa.layout_type` (compatibilidade com registros antigos)
 - Diretório de amostras locais (não versionado): `processor/.sample_txt/` (ignorado no Git).
+
+### 7.13 Branding e logos (Capybird Maker Labs + clientes)
+- Logo do sistema (Capybird Maker Labs) em `static/brand/capybird-maker-labs.svg` (servido em `/static/...`).
+- Aplicação do logo no topo, login e logout (templates):
+  - `templates/base.html`
+  - `templates/registration/login.html`
+  - `templates/registration/logged_out.html`
+- Logo do cliente por Empresa via upload (`Empresa.logo`) com exibição na listagem de Empresas.
 
 ## 8. Comandos de execução (ordem recomendada)
 
@@ -209,6 +263,11 @@ project_root/
 5. `python manage.py createsuperuser`
 6. `python manage.py seed_empresas`
 7. `python manage.py runserver`
+
+### 8.3 Comandos auxiliares
+- Sincronizar/criar usuários para contatos existentes:
+  - `python manage.py sync_contato_users`
+  - `python manage.py sync_contato_users --names Ana Edilson`
 
 ### 8.2 Ubuntu (WSL)
 - Atenção: a `.venv` criada no Windows geralmente não funciona no WSL; crie uma venv própria no Ubuntu caso necessário.
