@@ -121,3 +121,51 @@ class PayrollLayoutV2ParsingTests(SimpleTestCase):
         self.assertEqual(rows[0]["detail_cod2"], "002")
         self.assertIn("detail_cod3", rows[0])
         self.assertEqual(rows[0]["detail_cod3"], "")
+
+
+from django.test import TestCase
+
+
+class BillingPermissionsTests(TestCase):
+    def test_billing_menu_is_hidden_without_maintainer_link(self):
+        from django.contrib.auth import get_user_model
+        from django.test import Client
+        from people.models import Empresa, Contato
+
+        User = get_user_model()
+        user = User.objects.create_user(username="staff1", password="pw")
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        empresa = Empresa.objects.create(name="Cliente", cnpj="12345678000999", layout_type="GENESIS", is_maintainer=False)
+        Contato.objects.create(empresa=empresa, name="Staff", email="staff@x.com", is_active=True, user=user)
+
+        client = Client()
+        client.login(username="staff1", password="pw")
+        resp = client.get("/")
+        self.assertContains(resp, "Sistemas")
+        self.assertNotContains(resp, "Pedidos")
+        self.assertNotContains(resp, "Produtos")
+
+
+class BillingClosureLockTests(TestCase):
+    def test_closed_order_hides_edit_buttons(self):
+        from django.contrib.auth import get_user_model
+        from django.test import Client
+        from people.models import Empresa, Contato
+        from processor.models import BillingOrder
+
+        User = get_user_model()
+        user = User.objects.create_user(username="capy_admin", password="pw")
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        capy = Empresa.objects.create(name="Capybird", cnpj="12345678000001", layout_type="GENESIS", is_maintainer=True)
+        Contato.objects.create(empresa=capy, name="Marcelo", email="m@capy.com", is_active=True, user=user)
+        cliente = Empresa.objects.create(name="Cliente", cnpj="12345678000002", layout_type="GENESIS", is_maintainer=False)
+        order = BillingOrder.objects.create(empresa=cliente, created_by=user, status=BillingOrder.Status.CLOSED)
+
+        client = Client()
+        client.login(username="capy_admin", password="pw")
+        resp = client.get(f"/pedidos/{order.id}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "Adicionar item")
+        self.assertNotContains(resp, "Editar pedido")

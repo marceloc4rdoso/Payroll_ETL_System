@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Pedido #{{ order.id }} | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Pedido #{{ order.id }}</h1>
+  <p class="muted">{{ order.empresa.name }} · {{ order.get_status_display }} · Lançamento: {{ order.launch_date }}</p>
+  {% if order.closure %}
+    <p class="muted">Fechamento: <a href="{% url 'processor:closure_detail' order.closure.id %}">{{ order.closure.month|stringformat:"02d" }}/{{ order.closure.year }}</a></p>
+  {% endif %}
+
+  <div class="row">
+    <div class="card" style="flex: 1;">
+      <div class="kpi">
+        <div>
+          <div class="kpi-label">Total de registros</div>
+          <div class="kpi-value">{{ order.total_records }}</div>
+        </div>
+        <div>
+          <div class="kpi-label">Total</div>
+          <div class="kpi-value">{{ order.total_amount }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="margin-top: 12px;">
+    {% if order.status == "DRAFT" and not order.closure %}
+      <a class="btn" href="{% url 'processor:line_create' order.id %}">Adicionar item</a>
+      <a class="btn" href="{% url 'processor:order_update' order.id %}">Editar pedido</a>
+    {% endif %}
+    <a class="btn" href="{% url 'processor:order_list' %}">Voltar</a>
+  </p>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Origem</th>
+          <th>Qtd (registros)</th>
+          <th>Valor unit.</th>
+          <th>Total</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in order.lines.all %}
+          <tr>
+            <td>{{ l.product.name }}</td>
+            <td>
+              {% if l.upload %}
+                Upload #{{ l.upload.id }}
+              {% else %}
+                {{ l.manual_label }}
+              {% endif %}
+            </td>
+            <td>{{ l.quantity }}</td>
+            <td>{{ l.unit_price }}</td>
+            <td>{{ l.total_amount }}</td>
+            <td>
+              {% if order.status == "DRAFT" and not order.closure %}
+                <a href="{% url 'processor:line_update' l.id %}">Editar</a>
+                ·
+                <a href="{% url 'processor:line_delete' l.id %}">Excluir</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">Nenhum item.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

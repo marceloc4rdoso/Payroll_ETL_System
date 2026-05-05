@@ -28,7 +28,15 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+DJANGO_ALLOW_LAN = os.environ.get("DJANGO_ALLOW_LAN", "").strip() in ("1", "true", "True", "yes", "YES")
+if DJANGO_ALLOW_LAN:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = [
+        h.strip()
+        for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+        if h.strip()
+    ]
 
 
 # Application definition

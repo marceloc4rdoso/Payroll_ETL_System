@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Produtos | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Produtos/Serviços</h1>
+  <p><a class="btn" href="{% url 'processor:product_create' %}">Novo produto</a></p>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Código</th>
+          <th>Tipo</th>
+          <th>Valor</th>
+          <th>Ativo</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+          <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.code }}</td>
+            <td>{{ p.get_product_type_display }}</td>
+            <td>{{ p.unit_price }}</td>
+            <td>{% if p.is_active %}Sim{% else %}Não{% endif %}</td>
+            <td><a href="{% url 'processor:product_update' p.id %}">Editar</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">Nenhum produto cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

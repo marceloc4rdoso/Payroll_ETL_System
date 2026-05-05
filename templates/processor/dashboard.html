@@ -6,6 +6,127 @@
   <h1>Dashboard</h1>
 
   <div class="grid">
+    <div class="card col-12">
+      <h2>Pedidos (lançados por mês)</h2>
+      <form method="get">
+        <div class="row" style="align-items: end;">
+          <div style="flex: 1; min-width: 160px;">
+            <label for="orders_from">De</label>
+            <select id="orders_from" name="orders_from">
+              {% for opt in orders_filters.month_options %}
+                <option value="{{ opt.value }}" {% if opt.value == orders_filters.selected_from %}selected{% endif %}>{{ opt.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div style="flex: 1; min-width: 160px;">
+            <label for="orders_to">Até</label>
+            <select id="orders_to" name="orders_to">
+              {% for opt in orders_filters.month_options %}
+                <option value="{{ opt.value }}" {% if opt.value == orders_filters.selected_to %}selected{% endif %}>{{ opt.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {% if orders_filters.is_admin %}
+            <div style="flex: 2; min-width: 240px;">
+              <label for="orders_empresa">Cliente</label>
+              <select id="orders_empresa" name="orders_empresa">
+                <option value="">Todos</option>
+                {% for e in orders_filters.empresas %}
+                  <option value="{{ e.id }}" {% if orders_filters.selected_empresa == e.id|stringformat:"s" %}selected{% endif %}>{{ e.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          {% endif %}
+
+          <div style="flex: 1; min-width: 180px;">
+            <label for="orders_product_type">Tipo de produto</label>
+            <select id="orders_product_type" name="orders_product_type">
+              <option value="">Todos</option>
+              <option value="PER_RECORD" {% if orders_filters.selected_product_type == "PER_RECORD" %}selected{% endif %}>Por registro</option>
+              <option value="FIXED" {% if orders_filters.selected_product_type == "FIXED" %}selected{% endif %}>Fixo</option>
+            </select>
+          </div>
+
+          <div style="flex: 2; min-width: 240px;">
+            <label for="orders_product">Produto</label>
+            <select id="orders_product" name="orders_product">
+              <option value="">Todos</option>
+              {% for p in orders_filters.products %}
+                <option value="{{ p.id }}" {% if orders_filters.selected_product == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div style="min-width: 140px;">
+            <label>&nbsp;</label>
+            <button type="submit">Aplicar filtros</button>
+          </div>
+
+          <div style="min-width: 120px;">
+            <label>&nbsp;</label>
+            <a class="btn" href="{% url 'processor:dashboard' %}">Limpar</a>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="card col-4">
+      <div class="kpi">
+        <div>
+          <div class="kpi-label">Pedidos no período</div>
+          <div class="kpi-value">{{ orders_kpis.total_orders }}</div>
+        </div>
+        <span class="badge">Billing</span>
+      </div>
+    </div>
+    <div class="card col-4">
+      <div class="kpi">
+        <div>
+          <div class="kpi-label">Total (R$)</div>
+          <div class="kpi-value">{{ orders_kpis.total_amount|floatformat:2 }}</div>
+        </div>
+        <span class="badge">Valor</span>
+      </div>
+    </div>
+    <div class="card col-4">
+      <div class="kpi">
+        <div>
+          <div class="kpi-label">Registros no período</div>
+          <div class="kpi-value">{{ orders_kpis.total_records }}</div>
+        </div>
+        <span class="badge">Qtd</span>
+      </div>
+    </div>
+
+    <div class="card col-6">
+      <h2>Valor por mês</h2>
+      <div style="display: flex; gap: 10px; align-items: flex-end; height: 170px; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.03);">
+        {% for r in orders_monthly %}
+          <div style="flex: 1; min-width: 12px; height: 140px; display: flex; flex-direction: column; justify-content: flex-end;">
+            <div title="{{ r.label }} · R$ {{ r.amount|floatformat:2 }} · {{ r.orders }} pedidos" style="height: {{ r.amount_pct }}%; border-radius: 10px; background: linear-gradient(180deg, rgba(124, 58, 237, 0.95), rgba(59, 130, 246, 0.75)); border: 1px solid rgba(255,255,255,0.10);"></div>
+            <div class="muted" style="font-size: 11px; text-align: center; margin-top: 6px; white-space: nowrap;">{{ r.label }}</div>
+          </div>
+        {% empty %}
+          <div class="muted">Sem dados.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card col-6">
+      <h2>Registros por mês</h2>
+      <div style="display: flex; gap: 10px; align-items: flex-end; height: 170px; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.03);">
+        {% for r in orders_monthly %}
+          <div style="flex: 1; min-width: 12px; height: 140px; display: flex; flex-direction: column; justify-content: flex-end;">
+            <div title="{{ r.label }} · {{ r.records }} registros · {{ r.orders }} pedidos" style="height: {{ r.records_pct }}%; border-radius: 10px; background: linear-gradient(180deg, rgba(34, 197, 94, 0.95), rgba(59, 130, 246, 0.75)); border: 1px solid rgba(255,255,255,0.10);"></div>
+            <div class="muted" style="font-size: 11px; text-align: center; margin-top: 6px; white-space: nowrap;">{{ r.label }}</div>
+          </div>
+        {% empty %}
+          <div class="muted">Sem dados.</div>
+        {% endfor %}
+      </div>
+    </div>
+
     <div class="card col-4">
       <div class="kpi">
         <div>

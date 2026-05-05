@@ -163,9 +163,13 @@
         padding: 10px 10px;
         border-radius: 12px;
         border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.04);
+        background: rgba(0, 0, 0, 0.28);
         color: var(--text);
         outline: none;
+      }
+      select option, select optgroup {
+        background: rgba(11, 18, 32, 0.98);
+        color: var(--text);
       }
       label { display: block; margin: 10px 0 6px; color: var(--muted); font-size: 13px; }
       button {
@@ -271,9 +275,14 @@
           <a class="nav-link" href="{% url 'processor:upload' %}">Upload</a>
           <a class="nav-link" href="{% url 'processor:uploads' %}">Histórico</a>
           {% if user.is_staff or user.is_superuser %}
-            <a class="nav-link" href="{% url 'processor:system_list' %}">Sistemas</a>
             <a class="nav-link" href="{% url 'people:empresa_list' %}">Empresas</a>
             <a class="nav-link" href="{% url 'people:contato_list' %}">Contatos</a>
+            <a class="nav-link" href="{% url 'processor:system_list' %}">Sistemas</a>
+            {% if user.contato.empresa.is_maintainer or user.empresa_vinculo.empresa.is_maintainer %}
+              <a class="nav-link" href="{% url 'processor:product_list' %}">Produtos</a>
+              <a class="nav-link" href="{% url 'processor:order_list' %}">Pedidos</a>
+              <a class="nav-link" href="{% url 'processor:closure_list' %}">Fechamentos</a>
+            {% endif %}
           {% endif %}
         </div>
         <div class="spacer"></div>

@@ -4,7 +4,8 @@ from django import forms
 from django.forms import formset_factory
 
 from people.models import Empresa
-from processor.models import SourceSystem
+from processor.models import BillingLine, BillingOrder, ServiceProduct, SourceSystem, Upload
+from processor.models import BillingClosure
 
 
 class UploadForm(forms.Form):
@@ -146,3 +147,72 @@ class LayoutFieldForm(forms.Form):
 
 
 LayoutFieldFormSet = formset_factory(LayoutFieldForm, extra=30, can_delete=False)
+
+
+class ServiceProductForm(forms.ModelForm):
+    class Meta:
+        model = ServiceProduct
+        fields = ["code", "name", "product_type", "unit_price", "is_active", "is_default_for_uploads"]
+
+    def clean_code(self):
+        return (self.cleaned_data.get("code") or "").strip().upper()
+
+
+class BillingOrderForm(forms.ModelForm):
+    class Meta:
+        model = BillingOrder
+        fields = ["empresa", "launch_date", "status"]
+
+
+class BillingLineForm(forms.ModelForm):
+    class Meta:
+        model = BillingLine
+        fields = ["product", "upload", "manual_label", "quantity"]
+
+    def __init__(self, *args, empresa=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["product"].queryset = ServiceProduct.objects.filter(is_active=True).order_by("name")
+        if empresa is not None:
+            self.fields["upload"].queryset = Upload.objects.filter(empresa=empresa).order_by("-created_at")[:500]
+        else:
+            self.fields["upload"].queryset = Upload.objects.none()
+        self.fields["upload"].help_text = "Opcional. Se selecionar um Upload, pode deixar a quantidade vazia para usar os registros calculados."
+        self.fields["manual_label"].help_text = "Opcional. Use quando o CSV foi gerado fora do sistema."
+        self.fields["quantity"].help_text = "Obrigatório. Se você selecionou um Upload com registros calculados, pode deixar vazio para preencher automaticamente."
+
+    def clean(self):
+        cleaned = super().clean()
+        product = cleaned.get("product")
+        upload = cleaned.get("upload")
+        manual_label = (cleaned.get("manual_label") or "").strip()
+        quantity = cleaned.get("quantity")
+
+        if not product:
+            return cleaned
+
+        if upload and manual_label:
+            raise forms.ValidationError("Use Upload ou Descrição manual, não ambos.")
+
+        if upload and quantity is None:
+            cleaned["quantity"] = int(upload.row_count or 0)
+
+        if not upload and quantity is None:
+            if getattr(product, "product_type", None) == ServiceProduct.ProductType.FIXED:
+                cleaned["quantity"] = 1
+
+        if cleaned.get("quantity") is None:
+            raise forms.ValidationError("Informe a quantidade.")
+
+        return cleaned
+
+
+class BillingClosureForm(forms.ModelForm):
+    class Meta:
+        model = BillingClosure
+        fields = ["empresa", "year", "month"]
+
+    def clean_month(self):
+        m = int(self.cleaned_data["month"])
+        if m < 1 or m > 12:
+            raise forms.ValidationError("Mês deve ser entre 1 e 12.")
+        return m

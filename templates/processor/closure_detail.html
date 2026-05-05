@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Fechamento {{ closure.month|stringformat:"02d" }}/{{ closure.year }} | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Fechamento {{ closure.month|stringformat:"02d" }}/{{ closure.year }}</h1>
+  <p class="muted">{{ closure.empresa.name }} · {{ closure.get_status_display }}</p>
+
+  <div class="row">
+    <div class="card" style="flex: 1;">
+      <div class="kpi">
+        <div>
+          <div class="kpi-label">Total de registros</div>
+          <div class="kpi-value">{{ closure.total_records }}</div>
+        </div>
+        <div>
+          <div class="kpi-label">Total</div>
+          <div class="kpi-value">{{ closure.total_amount }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;">
+    {% if closure.status != "CLOSED" %}
+      <form method="post" action="{% url 'processor:closure_close' closure.id %}">
+        {% csrf_token %}
+        <button type="submit">Fechar período</button>
+      </form>
+    {% endif %}
+    <a class="btn" href="{% url 'processor:closure_list' %}">Voltar</a>
+  </div>
+
+  <h2 style="margin-top: 18px;">Pedidos vinculados</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Lançamento</th>
+          <th>Status</th>
+          <th>Registros</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in closure.orders.all %}
+          <tr>
+            <td><a href="{% url 'processor:order_detail' o.id %}">#{{ o.id }}</a></td>
+            <td>{{ o.launch_date }}</td>
+            <td>{{ o.get_status_display }}</td>
+            <td>{{ o.total_records }}</td>
+            <td>{{ o.total_amount }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">Nenhum pedido vinculado ainda.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

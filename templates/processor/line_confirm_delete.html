@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Excluir item | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Excluir item</h1>
+  <div class="card" style="max-width: 720px;">
+    <p>Confirma excluir este item do pedido?</p>
+    <p class="muted">{{ object.product.name }} · Qtd: {{ object.quantity }}</p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit">Excluir</button>
+      <a class="btn" href="{% url 'processor:order_detail' object.order_id %}">Cancelar</a>
+    </form>
+  </div>
+{% endblock %}

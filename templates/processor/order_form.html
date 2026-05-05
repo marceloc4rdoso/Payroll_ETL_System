@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Pedido | Payroll ETL{% endblock %}
+
+{% block content %}
+  <h1>Pedido</h1>
+  <div class="card" style="max-width: 720px;">
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Salvar</button>
+    </form>
+  </div>
+  <p><a class="btn" href="{% url 'processor:order_list' %}">Voltar</a></p>
+{% endblock %}
