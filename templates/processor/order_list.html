@@ -5,6 +5,47 @@
 {% block content %}
   <h1>Pedidos</h1>
   <p><a class="btn" href="{% url 'processor:order_create' %}">Novo pedido</a></p>
+
+  <div class="card" style="margin-bottom: 14px;">
+    <form method="get">
+      <div class="row" style="align-items: end;">
+        <div style="flex: 1; min-width: 160px;">
+          <label for="month">Mês</label>
+          <select id="month" name="month">
+            {% for opt in filters.month_options %}
+              <option value="{{ opt.value }}" {% if opt.value == filters.selected_month %}selected{% endif %}>{{ opt.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="flex: 2; min-width: 240px;">
+          <label for="empresa">Cliente</label>
+          <select id="empresa" name="empresa">
+            <option value="">Todos</option>
+            {% for e in filters.empresa_options %}
+              <option value="{{ e.id }}" {% if filters.selected_empresa == e.id|stringformat:"s" %}selected{% endif %}>{{ e.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="flex: 2; min-width: 240px;">
+          <label for="q">Busca (nome/CNPJ)</label>
+          <input id="q" name="q" value="{{ filters.q }}" placeholder="Ex.: Valdequímica ou 11437239000140" />
+        </div>
+
+        <div style="min-width: 140px;">
+          <label>&nbsp;</label>
+          <button type="submit">Filtrar</button>
+        </div>
+
+        <div style="min-width: 120px;">
+          <label>&nbsp;</label>
+          <a class="btn" href="{% url 'processor:order_list' %}">Limpar</a>
+        </div>
+      </div>
+    </form>
+  </div>
+
   <div class="card">
     <table>
       <thead>

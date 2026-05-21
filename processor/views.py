@@ -849,8 +849,79 @@ class BillingOrderListView(CapybirdAdminOnlyMixin, LoginRequiredMixin, ListView)
     context_object_name = "orders"
     paginate_by = 50
 
+    @staticmethod
+    def _parse_ym(value: str | None) -> tuple[int, int] | None:
+        raw = (value or "").strip()
+        if not raw:
+            return None
+        try:
+            parts = raw.split("-", 1)
+            y = int(parts[0])
+            m = int(parts[1])
+        except Exception:
+            return None
+        if y < 1900 or m < 1 or m > 12:
+            return None
+        return y, m
+
     def get_queryset(self):
-        return BillingOrder.objects.select_related("empresa", "created_by").prefetch_related("lines__product").order_by("-created_at")
+        today = timezone.localdate()
+        ym = self._parse_ym(self.request.GET.get("month"))
+        year = ym[0] if ym else today.year
+        month = ym[1] if ym else today.month
+        start = date(year, month, 1)
+        if month == 12:
+            end = date(year + 1, 1, 1)
+        else:
+            end = date(year, month + 1, 1)
+
+        qs = BillingOrder.objects.filter(launch_date__gte=start, launch_date__lt=end)
+
+        empresa_id = (self.request.GET.get("empresa") or "").strip()
+        if empresa_id.isdigit():
+            qs = qs.filter(empresa_id=int(empresa_id))
+
+        q = (self.request.GET.get("q") or "").strip()
+        if q:
+            qs = qs.filter(Q(empresa__name__icontains=q) | Q(empresa__cnpj__icontains=q))
+
+        return (
+            qs
+            .select_related("empresa", "created_by")
+            .prefetch_related("lines__product")
+            .order_by("-launch_date", "-created_at")
+        )
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+
+        month_options = []
+        cursor = date(today.year, today.month, 1)
+        for _ in range(0, 24):
+            month_options.append(
+                {
+                    "value": f"{cursor.year:04d}-{cursor.month:02d}",
+                    "label": f"{cursor.month:02d}/{cursor.year}",
+                }
+            )
+            if cursor.month == 1:
+                cursor = date(cursor.year - 1, 12, 1)
+            else:
+                cursor = date(cursor.year, cursor.month - 1, 1)
+
+        selected_month = (self.request.GET.get("month") or "").strip()
+        if not self._parse_ym(selected_month):
+            selected_month = f"{today.year:04d}-{today.month:02d}"
+
+        ctx["filters"] = {
+            "month_options": month_options,
+            "selected_month": selected_month,
+            "empresa_options": list(Empresa.objects.filter(is_active=True).order_by("name").values("id", "name")),
+            "selected_empresa": (self.request.GET.get("empresa") or "").strip(),
+            "q": (self.request.GET.get("q") or "").strip(),
+        }
+        return ctx
 
 
 class BillingOrderCreateView(CapybirdAdminOnlyMixin, LoginRequiredMixin, CreateView):
